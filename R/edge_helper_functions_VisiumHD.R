@@ -1,10 +1,11 @@
-#' Fill isolated spots in 3x3 focal window
+#' Fill isolated spots in `3x3` focal window
 #'
 #' Fills a center pixel if it is completely surrounded by outlier spots.
 #'
-#' @param x Numeric vector of length 9 representing a 3x3 window where x[5] is center
+#' @param x Numeric vector of length 9 representing a `3x3` window where \code{x[5]} is center
 #' @return Integer: 1 if center should be filled, 0 otherwise, NA if center is NA
 #' @keywords internal
+#' @noRd
 my_fill <- function(x) {
   center <- x[5]
   if(is.na(center)) return(NA_integer_)
@@ -19,13 +20,14 @@ my_fill <- function(x) {
 }
 
 
-#' Fill spots outlined by outliers in 5x5 window
+#' Fill spots outlined by outliers in `5x5` window
 #'
-#' Fills a center pixel if completely outlined by outliers in 5x5 perimeter.
+#' Fills a center pixel if completely outlined by outliers in `5x5` perimeter.
 #'
-#' @param x Numeric vector of length 25 representing a 5x5 window where x[13] is center
+#' @param x Numeric vector of length 25 representing a `5x5` window where \code{x[13]} is center
 #' @return Integer: 1 if center should be filled, 0 otherwise, NA if center is NA
 #' @keywords internal
+#' @noRd
 my_outline <- function(x) {
   center <- x[13]
   if(is.na(center)) return(NA_integer_)
@@ -47,6 +49,7 @@ my_outline <- function(x) {
 #' @param x Numeric vector of length 9 in star pattern arrangement
 #' @return Integer: 1 if center should be filled, 0 otherwise, NA if center is NA
 #' @keywords internal
+#' @noRd
 my_fill_star <- function(x) {
   center <- x[5]
   if(is.na(center)) return(NA_integer_)
