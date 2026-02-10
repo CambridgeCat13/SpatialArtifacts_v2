@@ -11,7 +11,7 @@
 - **Dual-Platform Support**: Works on both standard **10x Visium** and high-resolution **Visium HD**.
 - **Morphological Detection**: Uses raster-based focal transformations (fill, outline, star-pattern) to intelligently identify artifact clusters.
 - **Hierarchical Classification**: Categorizes artifacts into actionable groups (e.g., *Large Edge Artifact*, *Small Interior Artifact*).
-- **Fast & Efficient**: Optimized with `terra` for handling large HD datasets.
+- **Fast & Efficient**: Optimized with `terra` for handling large datasets.
 
 ## Installation
 
@@ -47,7 +47,7 @@ Visit the package website: **[https://CambridgeCat13.github.io/SpatialArtifacts_
 
 ## Contributors
 
-- **Harriet He**
+- **Harriet Jiali He**
 - **Jacqueline Thompson**
 - **Michael Totty**
 - **Stephanie Hicks**
