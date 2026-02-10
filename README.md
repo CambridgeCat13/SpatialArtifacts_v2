@@ -28,13 +28,17 @@ devtools::install_github("CambridgeCat13/SpatialArtifacts_v2")
 library(SpatialDryArtifacts)
 library(SpatialExperiment)
 
-# 1. Detect artifacts (Standard Visium)
-spe <- detectEdgeArtifacts(spe, qc_metric = "sum_umi")
+# 1. Detect artifacts
+# Option A: Standard Visium (Hexagonal Grid)
+# Just specify platform = "visium"
+spe <- detectEdgeArtifacts(spe, platform = "visium", qc_metric = "sum_umi")
 
-# OR for Visium HD:
-# spe <- detectEdgeDryspots_VisiumHD(spe, resolution = "8um")
+# Option B: Visium HD (Square Grid)
+# Specify platform = "visiumhd" AND the required resolution ("8um" or "16um")
+# spe <- detectEdgeArtifacts(spe, platform = "visiumhd", resolution = "8um")
 
-# 2. Classify results
+# 2. Classify results (Platform independent)
+# Note: For Visium HD, remember to increase min_spots (e.g., min_spots = 400)
 spe <- classifyEdgeArtifacts(spe)
 
 # 3. View classification
