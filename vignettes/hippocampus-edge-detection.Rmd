@@ -90,13 +90,14 @@ Tuning parameters lets you adapt the workflow to different tissue types, data qu
 
 | Platform | Function Call | Required Parameters |
 |----------|--------------|---------------------|
-| **Standard Visium** | `detectEdgeArtifacts(spe, platform="visium", ...)` | `shifted` (usually `TRUE`) |
+| **Standard Visium** | `detectEdgeArtifacts(spe, platform="visium", ...)` | None (uses default `shifted=FALSE`) |
 | **VisiumHD** | `detectEdgeArtifacts(spe, platform="visiumhd", resolution="16um", ...)` | `resolution` ("8um" or "16um") |
 
 **Example calls:**
 ```r
 # Standard Visium (55µm hexagonal grid)
-spe <- detectEdgeArtifacts(spe, platform = "visium", shifted = TRUE, ...)
+# IMPORTANT: Use shifted = FALSE for standard Visium data from read10xVisium()
+spe <- detectEdgeArtifacts(spe, platform = "visium", shifted = FALSE, ...)
 
 # VisiumHD 16µm (square grid)
 spe <- detectEdgeArtifacts(spe, platform = "visiumhd", resolution = "16um", ...)
@@ -162,11 +163,27 @@ The wrapper function accepts platform-specific parameters that are routed to the
   - Isolated "normal" regions smaller than this threshold within outlier areas will be filled in to create contiguous artifact regions
   - **For Standard Visium:** 40 spots ≈ 0.12 mm² physical area
 
-- *`shifted`* (Default: `FALSE`) – Apply coordinate adjustment for hexagonal grid alignment
-  - **Standard Visium typically requires `shifted = TRUE`** when using array coordinates from Space Ranger. 
-  - Set to `FALSE` if using pre-transformed pixel coordinates or for VisiumHD square grids.
-  - This corrects for the staggered arrangement of hexagonal spots
+- *`shifted`* (Default: `FALSE`) – ⚠️ **CRITICAL PARAMETER - READ CAREFULLY**
   
+  **For standard Visium data loaded via `read10xVisium()` or `SpatialExperiment`: ALWAYS use `shifted = FALSE` (default).**
+  
+  **Why:** Standard Visium array coordinates (`array_col`: 0–127, `array_row`: 0–77) **already form a regular integer grid** where every spot has a unique (array_row, array_col) combination. The hexagonal offset pattern is already encoded in these coordinate values—**no adjustment is needed**.
+  
+  **When to use `shifted = TRUE`:** Only for non-standard coordinate systems where odd columns have a physical half-unit offset that is **not** already corrected in the coordinate values. This is extremely rare and typically only applies to custom data formats.
+  
+  **How to verify your data:**
+  ```r
+  # If this returns TRUE → use shifted = FALSE (coordinates are already regular)
+  nrow(unique(colData(spe)[, c("array_row", "array_col")])) == ncol(spe)
+  ```
+  
+  **What happens if you incorrectly use `shifted = TRUE`:**
+  - Coordinate transposition errors corrupt spatial topology
+  - Artifact detection fails to identify true edge regions  
+  - Spots are incorrectly mapped in raster space
+  - Classification results become unreliable
+  
+  **Bottom line:** Unless you have a custom, non-standard coordinate system (very rare), always use the default `shifted = FALSE`.
   
 - *`batch_var`* (Default: `"both"`) – Determines grouping for MAD calculation
   - Options: `"sample_id"`, `"slide"`, or `"both"`
@@ -255,7 +272,7 @@ The classification step is **platform-independent** but requires appropriate par
 | Feature | Standard Visium | VisiumHD |
 |---------|----------------|----------|
 | **Grid Type** | Hexagonal | Square |
-| **Requires `shifted`?** | Yes (`TRUE`) | No (not used) |
+| **Requires `shifted`?** | **NO - use `FALSE`** | No (not used) |
 | **Resolution Parameter** | Not applicable | **Required** (`"8um"` or `"16um"`) |
 | **Edge Detection Method** | Morphological + boundary coverage | Buffer zone + morphological |
 | **Parameter Units** | Spot counts | Physical units (µm, µm²) |
@@ -297,7 +314,7 @@ spe_detected <- detectEdgeArtifacts(
   platform = "visium",        # IMPORTANT: Specify Standard Visium platform
   qc_metric = "sum_umi",         
   samples = "sample_id",
-  shifted = TRUE,             # Hexagonal grid coordinate adjustment
+  shifted = FALSE,            # CRITICAL: Use FALSE for standard Visium data
   batch_var = "sample_id", 
   mad_threshold = 3,
   edge_threshold = 0.75,
@@ -331,7 +348,7 @@ For VisiumHD data, the workflow is identical **except for parameter scaling**. H
 library(scuttle)
 spe_hd16 <- addPerCellQCMetrics(spe_hd16)
 
-# Step 2: Detection Phase - VisiumHD uses square grid (no 'shifted' needed)
+# Step 2: Detection Phase - VisiumHD uses square grid (no 'shifted' parameter)
 spe_hd16_detected <- detectEdgeArtifacts(
   spe_hd16,
   platform = "visiumhd",       # Specify VisiumHD platform
@@ -400,7 +417,7 @@ table(spe_hd8_classified$edge_artifact_classification)
 
 | Platform | Function Call | Required Parameters |
 |----------|--------------|---------------------|
-| **Standard Visium** | `detectEdgeArtifacts(..., platform="visium")` | `shifted=TRUE` |
+| **Standard Visium** | `detectEdgeArtifacts(..., platform="visium")` | None (use default `shifted=FALSE`) |
 | **VisiumHD 16µm** | `detectEdgeArtifacts(..., platform="visiumhd", resolution="16um")` | `resolution` |
 | **VisiumHD 8µm** | `detectEdgeArtifacts(..., platform="visiumhd", resolution="8um")` | `resolution` |
 
@@ -410,7 +427,7 @@ table(spe_hd8_classified$edge_artifact_classification)
 |-----------|----------------|---------------|--------------|
 | `platform` | `"visium"` | `"visiumhd"` | `"visiumhd"` |
 | `resolution` | N/A (not used) | `"16um"` | `"8um"` |
-| `shifted` | `TRUE` | N/A (handled internally) | N/A |
+| `shifted` | **`FALSE`** | N/A (handled internally) | N/A |
 | `buffer_width_um` | N/A | `100` (default) | `100` (default) |
 | `mad_threshold` | 1.5-3.0 | 2.0-3.0 | 2.0-3.0 |
 | `min_spots` (classify) | 20-40 | 100-200 | 400-800 |
@@ -723,15 +740,22 @@ This vignette demonstrated the **SpatialDryArtifacts** workflow across multiple 
 
 **Key Takeaways for Multi-Platform Usage:**
 
-1. **Grid Structure:** Standard Visium uses hexagonal grids (`shifted = TRUE`), while VisiumHD uses square grids (`shifted = FALSE`)
+1. **⚠️ CRITICAL: `shifted` Parameter for Standard Visium**
+   - **ALWAYS use `shifted = FALSE`** for standard Visium data from `read10xVisium()` or `SpatialExperiment`
+   - Standard Visium array coordinates already form a regular grid—no adjustment needed
+   - Using `shifted = TRUE` incorrectly will corrupt spatial topology and cause detection failures
 
-2. **Critical Parameter Scaling:** The `min_spots` threshold in `classifyEdgeArtifacts()` must scale with spatial resolution:
+2. **Grid Structure:** Standard Visium uses hexagonal grids, while VisiumHD uses square grids
+   - Different grid types are handled automatically by the platform-specific implementations
+   - No manual grid adjustment needed when using correct `platform` parameter
+
+3. **Critical Parameter Scaling:** The `min_spots` threshold in `classifyEdgeArtifacts()` must scale with spatial resolution:
    - Use the formula: `min_spots_HD = min_spots_visium × (55 / bin_size)²`
    - Without scaling, artifacts will be incorrectly classified by size
 
-3. **Morphological Framework:** The same detection logic works across platforms, automatically adapting to different grid arrangements
+4. **Morphological Framework:** The same detection logic works across platforms, automatically adapting to different grid arrangements
 
-4. **Physical Consistency:** Scaled parameters ensure that "large" and "small" artifact classifications represent equivalent physical sizes regardless of platform
+5. **Physical Consistency:** Scaled parameters ensure that "large" and "small" artifact classifications represent equivalent physical sizes regardless of platform
 
 Overall, **SpatialDryArtifacts** provides a unified, platform-agnostic framework for detecting and classifying spatial artifacts, enabling consistent quality control across the evolving spatial transcriptomics technology landscape.
 
