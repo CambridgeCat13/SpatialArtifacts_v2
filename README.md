@@ -1,25 +1,66 @@
-# SpatialDryArtifacts
-**Adaptive edge artifact detection for 10x Visium and Visium HD.**
 
-## Overview
-**SpatialDryArtifacts** implements enhanced methods for detecting edge artifacts and dry spots—technical artifacts caused by incomplete reagent coverage or tissue handling issues. This package extends existing spatial transcriptomics quality control methods by incorporating **spatial neighborhood information** and **morphological vision**.
+<!-- README.md is generated from README.Rmd. Please edit that file -->
 
-## Key Features
-- **Dual-Platform Support**: Works on both standard **10x Visium** and high-resolution **Visium HD**.
-- **Morphological Detection**: Uses raster-based focal transformations (fill, outline, star-pattern) to intelligently identify artifact clusters.
-- **Hierarchical Classification**: Categorizes artifacts into actionable groups (e.g., *Large Edge Artifact*, *Small Interior Artifact*).
-- **Fast & Efficient**: Optimized with `terra` for handling large datasets.
+# SpatialArtifacts
+
+<!-- badges: start -->
+
+[![Lifecycle:
+experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+<!-- badges: end -->
+
+The goal of `SpatialArtifacts` is to detect interior and edge artifacts,
+such as dry spots caused by incomplete reagent coverage or tissue
+handling, in spatial transcriptomics data. The package currently
+supports the 10x Genomics `Visium` and `VisiumHD` platforms.
+
+If you experience any issues using the package or would like to make a
+suggestion, please open an issue on the [GitHub
+repository](https://github.com/CambridgeCat13/SpatialArtifacts/issues).
+
+To find more information, please visit the [documentation
+website](https://cambridgecat13.github.io/SpatialArtifacts).
+
+### Key Features
+
+- **Multi-platform support**: Works on both standard **10x Visium** and
+  high-resolution **Visium HD**
+- **Morphological detection**: Uses raster-based focal transformations
+  (fill, outline, star-pattern) to intelligently identify artifact
+  clusters
+- **Hierarchical classification**: Categorizes artifacts into actionable
+  groups (e.g., *Large Edge Artifact*, *Small Interior Artifact*)
+- **Fast and efficient**: Optimized with the
+  [`terra`](https://CRAN.R-project.org/package=terra) R package for
+  handling large datasets
 
 ## Installation
-You can install the development version from [GitHub](https://github.com/CambridgeCat13/SpatialArtifacts_v2) with:
-```r
-# install.packages("devtools")
-devtools::install_github("CambridgeCat13/SpatialArtifacts_v2")
+
+You can install the latest version of `SpatialArtifacts` from
+Bioconductor with the following code:
+
+``` r
+if (!requireNamespace("BiocManager", quietly = TRUE)) {
+    install.packages("BiocManager")
+}
+
+BiocManager::install("SpatialArtifacts")
 ```
 
-## Quick Start
-```r
-library(SpatialDryArtifacts)
+You can install the development version of SpatialDryArtifacts from
+[GitHub](https://github.com/CambridgeCat13/SpatialArtifacts) with:
+
+``` r
+# install.packages("pak")
+pak::pak("CambridgeCat13/SpatialArtifacts")
+```
+
+## Example
+
+This is a basic example which shows you how to solve a common problem:
+
+``` r
+library(SpatialArtifacts)
 library(SpatialExperiment)
 
 # 1. Detect artifacts
@@ -39,37 +80,78 @@ spe <- classifyEdgeArtifacts(spe)
 table(spe$edge_artifact_classification)
 ```
 
+## Tutorials
+
+A detailed tutorial is available in the package vignette from
+Bioconductor. A direct link to the tutorial / package vignette is
+available [here]().
+
+## Development tools
+
+- Continuous code testing is possible thanks to GitHub actions.
+- The [documentation website]() is automatically updated thanks to
+  `BiocStyle::CRANpkg('pkgdown')`.
+- The code is styled automatically thanks to
+  `BiocStyle::CRANpkg('styler')`.
+- The documentation is formatted thanks to
+  `BiocStyle::CRANpkg('devtools')` and `BiocStyle::CRANpkg('roxygen2')`.
+
+This package was developed using `BiocStyle::Biocpkg('biocthis')`.
+
+# need to intergrate still
+
 ## Important: `shifted` Parameter Warning
 
-**For standard Visium data loaded via `read10xVisium()` or `SpatialExperiment`: ALWAYS use `shifted = FALSE` (default).**
+**For standard Visium data loaded via `read10xVisium()` or
+`SpatialExperiment`: ALWAYS use `shifted = FALSE` (default).**
 
 ### Why this matters:
-Standard Visium array coordinates (`array_col`: 0–127, `array_row`: 0–77) already form a **regular integer grid** where every spot has a unique (array_row, array_col) combination. The hexagonal offset pattern is already encoded in these coordinate values—**no adjustment is needed**.
+
+Standard Visium array coordinates (`array_col`: 0–127, `array_row`:
+0–77) already form a **regular integer grid** where every spot has a
+unique (array_row, array_col) combination. The hexagonal offset pattern
+is already encoded in these coordinate values—**no adjustment is
+needed**.
 
 ### When to use `shifted = TRUE`:
-`shifted = TRUE` is **only** relevant for non-standard coordinate systems where odd columns have a physical half-unit offset that is **not** already corrected in the coordinate values themselves. This is extremely rare and typically only applies to custom data formats.
+
+`shifted = TRUE` is **only** relevant for non-standard coordinate
+systems where odd columns have a physical half-unit offset that is
+**not** already corrected in the coordinate values themselves. This is
+extremely rare and typically only applies to custom data formats.
 
 ### How to verify your data:
-You can check whether your coordinates are already regular (and thus require `shifted = FALSE`) by running:
-```r
+
+You can check whether your coordinates are already regular (and thus
+require `shifted = FALSE`) by running:
+
+``` r
 # If this returns TRUE → use shifted = FALSE (coordinates are already regular)
 nrow(unique(colData(spe)[, c("array_row", "array_col")])) == ncol(spe)
 ```
 
-If this check returns `TRUE`, your coordinates are **already properly formatted** for standard Visium data, and you should **NOT** use `shifted = TRUE`.
+If this check returns `TRUE`, your coordinates are **already properly
+formatted** for standard Visium data, and you should **NOT** use
+`shifted = TRUE`.
 
 ### What happens if you incorrectly use `shifted = TRUE`:
-Using `shifted = TRUE` on standard Visium data will cause **coordinate transposition errors** that corrupt the spatial topology:
-- Artifact detection will fail to identify true edge regions
-- Spots will be incorrectly mapped in raster space
-- Classification results will be unreliable
 
-**Bottom line**: Unless you have a custom, non-standard coordinate system (very rare), always use the default `shifted = FALSE`.
+Using `shifted = TRUE` on standard Visium data will cause **coordinate
+transposition errors** that corrupt the spatial topology: - Artifact
+detection will fail to identify true edge regions - Spots will be
+incorrectly mapped in raster space - Classification results will be
+unreliable
+
+**Bottom line**: Unless you have a custom, non-standard coordinate
+system (very rare), always use the default `shifted = FALSE`.
 
 ## Documentation
-Visit the package website: **[https://CambridgeCat13.github.io/SpatialArtifacts_v2/](https://CambridgeCat13.github.io/SpatialArtifacts_v2/)**
+
+Visit the package website:
+**<https://CambridgeCat13.github.io/SpatialArtifacts_v2/>**
 
 ## Contributors
+
 - **Harriet Jiali He**
 - **Jacqueline Thompson**
 - **Michael Totty**
